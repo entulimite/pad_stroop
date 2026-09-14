@@ -86,12 +86,11 @@
 
   <script>
     var paletaColores = [
-      { hex: '#FF0000', nombre: 'Rojo', textoHex: '#FFFFFF' },
-      { hex: '#00FF00', nombre: 'Verde', textoHex: '#000000' },
-      { hex: '#0000FF', nombre: 'Azul', textoHex: '#FFFFFF' },
-      { hex: '#FFFF00', nombre: 'Amarillo', textoHex: '#000000' },
-      { hex: '#FF00FF', nombre: 'Rosa', textoHex: '#FFFFFF' },
-      { hex: '#00FFFF', nombre: 'Cian', textoHex: '#000000' }
+      { hex: '#FF0000', nombre: 'Rojo' },
+      { hex: '#00FF00', nombre: 'Verde' },
+      { hex: '#0000FF', nombre: 'Azul' },
+      { hex: '#FFFF00', nombre: 'Amarillo' },
+      { hex: '#FF00FF', nombre: 'Rosa' }
     ];
 
     var temporizadorColor = null;
@@ -142,20 +141,31 @@
     }
 
     function cambiarColorStroop() {
+      // 1. Fondo aleatorio
       var idxFondo = Math.floor(Math.random() * paletaColores.length);
       var objFondo = paletaColores[idxFondo];
 
+      // 2. Palabra escrita diferente al fondo
       var idxPalabra;
       do {
         idxPalabra = Math.floor(Math.random() * paletaColores.length);
       } while (idxPalabra === idxFondo);
       var objPalabra = paletaColores[idxPalabra];
 
+      // 3. Color de la Tinta de la palabra (diferente a la palabra misma y al fondo)
+      var idxTinta;
+      do {
+        idxTinta = Math.floor(Math.random() * paletaColores.length);
+      } while (idxTinta === idxPalabra || idxTinta === idxFondo);
+      var objTinta = paletaColores[idxTinta];
+
+      // Aplicar estilos
       pad.style.backgroundColor = objFondo.hex;
       wordDisplay.innerText = objPalabra.nombre;
-      wordDisplay.style.color = objFondo.textoHex;
+      wordDisplay.style.color = objTinta.hex;
       wordDisplay.style.display = 'block';
 
+      // Audio según el modo de atención seleccionado
       var modoObjetivo = document.getElementById('targetSelect').value;
       if (modoObjetivo === 'fondo') {
         decirColor(objFondo.nombre);
@@ -163,6 +173,7 @@
         decirColor(objPalabra.nombre);
       }
 
+      // Control del tiempo de estímulo (flash)
       var duracionFlashSeg = parseFloat(document.getElementById('flashInput').value) || 0;
       if (duracionFlashSeg > 0) {
         if (temporizadorFlash !== null) { clearTimeout(temporizadorFlash); }
@@ -176,7 +187,6 @@
     function iniciarJuego() {
       detenerJuego();
 
-      // Desbloquear motor de voz en Safari/iOS/Chrome con el toque de GO
       if ('speechSynthesis' in window) {
         window.speechSynthesis.resume();
       }
