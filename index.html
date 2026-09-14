@@ -24,7 +24,7 @@
     select { font-size: 11px; padding: 2px 0; border-radius: 3px; background-color: #222; color: #fff; border: 1px solid #444; width: 100%; max-width: 65px; }
     .unit { font-size: 9px; color: #888; font-weight: bold; }
     .btn-group { display: flex; justify-content: flex-end; gap: 3px; flex: 1; max-width: 140px; }
-    button { font-size: 11px; font-weight: bold; padding: 4px 0; border: none; border-radius: 4px; color: #fff; }
+    button { font-size: 11px; font-weight: bold; padding: 4px 0; border: none; border-radius: 4px; color: #fff; cursor: pointer; }
     .btn-action { flex: 1; }
     #btnStart { background-color: #28a745; }
     #btnStop { background-color: #dc3545; }
@@ -111,7 +111,7 @@
         btnAudio.innerHTML = '🔊';
         btnAudio.style.backgroundColor = '#333';
       } else {
-        btnAudio.innerHTML = '0;
+        btnAudio.innerHTML = '🔇';
         btnAudio.style.backgroundColor = '#555';
         if ('speechSynthesis' in window) {
           window.speechSynthesis.cancel();
@@ -121,11 +121,15 @@
 
     function decirColor(texto) {
       if (vozActivada && ('speechSynthesis' in window)) {
-        window.speechSynthesis.cancel();
-        var mensaje = new SpeechSynthesisUtterance(texto);
-        mensaje.lang = 'es-ES';
-        mensaje.rate = 1.2;
-        window.speechSynthesis.speak(mensaje);
+        try {
+          window.speechSynthesis.cancel();
+          var mensaje = new SpeechSynthesisUtterance(texto);
+          mensaje.lang = 'es-ES';
+          mensaje.rate = 1.2;
+          window.speechSynthesis.speak(mensaje);
+        } catch(e) {
+          console.log("Audio error:", e);
+        }
       }
     }
 
@@ -138,24 +142,20 @@
     }
 
     function cambiarColorStroop() {
-      // 1. Color de Fondo Aleatorio
       var idxFondo = Math.floor(Math.random() * paletaColores.length);
       var objFondo = paletaColores[idxFondo];
 
-      // 2. Palabra Aleatoria INCONGRUENTE
       var idxPalabra;
       do {
         idxPalabra = Math.floor(Math.random() * paletaColores.length);
       } while (idxPalabra === idxFondo);
       var objPalabra = paletaColores[idxPalabra];
 
-      // 3. Renderizar en Pantalla
       pad.style.backgroundColor = objFondo.hex;
       wordDisplay.innerText = objPalabra.nombre;
       wordDisplay.style.color = objFondo.textoHex;
       wordDisplay.style.display = 'block';
 
-      // 4. Audio según la regla de atención seleccionada
       var modoObjetivo = document.getElementById('targetSelect').value;
       if (modoObjetivo === 'fondo') {
         decirColor(objFondo.nombre);
@@ -163,7 +163,6 @@
         decirColor(objPalabra.nombre);
       }
 
-      // 5. Ocultar según Tiempo de Estímulo
       var duracionFlashSeg = parseFloat(document.getElementById('flashInput').value) || 0;
       if (duracionFlashSeg > 0) {
         if (temporizadorFlash !== null) { clearTimeout(temporizadorFlash); }
@@ -176,6 +175,11 @@
 
     function iniciarJuego() {
       detenerJuego();
+
+      // Desbloquear motor de voz en Safari/iOS/Chrome con el toque de GO
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+      }
 
       var intervaloColorMs = (parseFloat(document.getElementById('intervalInput').value) || 1.0) * 1000;
       var duracionTotalSeg = parseInt(document.getElementById('durationSelect').value, 10);
