@@ -1,1 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pad Stroop - PCR</title>
+  <style>
+    * { box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: -apple-system, sans-serif; }
+    #pad { 
+      width: 100%; height: 90%; background-color: #222; display: flex; 
+      justify-content: center; align-items: center; position: relative; 
+    }
+    #wordDisplay { 
+      font-size: 14vw; font-weight: 900; text-transform: uppercase; 
+      letter-spacing: 2px; text-shadow: 2px 2px 8px rgba(0,0,0,0.8); display: none; 
+    }
+    #timerDisplay { position: absolute; top: 15px; right: 20px; color: #fff; font-size: 32px; font-weight: bold; font-family: monospace; text-shadow: 1px 1px 4px #000; }
+    #controls { height: 10%; background-color: #111; color: #fff; padding: 4px 6px; display: flex; flex-direction: column; justify-content: space-between; border-top: 1px solid #333; width: 100%; overflow: hidden; }
+    .row-container { display: flex; justify-content: space-between; align-items: center; gap: 4px; width: 100%; }
+    .field-group { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; }
+    label { font-size: 10px; font-weight: bold; color: #ccc; white-space: nowrap; }
+    input[type=number] { font-size: 12px; font-weight: bold; padding: 2px; border-radius: 3px; background-color: #222; color: #28a745; border: 1px solid #444; width: 100%; max-width: 42px; text-align: center; font-family: monospace; }
+    select { font-size: 11px; padding: 2px 0; border-radius: 3px; background-color: #222; color: #fff; border: 1px solid #444; width: 100%; max-width: 65px; }
+    .unit { font-size: 9px; color: #888; font-weight: bold; }
+    .btn-group { display: flex; justify-content: flex-end; gap: 3px; flex: 1; max-width: 140px; }
+    button { font-size: 11px; font-weight: bold; padding: 4px 0; border: none; border-radius: 4px; color: #fff; }
+    .btn-action { flex: 1; }
+    #btnStart { background-color: #28a745; }
+    #btnStop { background-color: #dc3545; }
+    #btnAudio { background-color: #333; width: 30px; font-size: 12px; border: 1px solid #555; }
+    .branding { text-align: center; font-size: 9px; color: #666; margin-bottom: 1px; font-weight: normal; width: 100%; }
+  </style>
+</head>
+<body>
 
+  <div id="pad">
+    <div id="wordDisplay"></div>
+    <div id="timerDisplay">00:00</div>
+  </div>
+
+  <div id="controls">
+    <div class="row-container">
+      <div class="field-group">
+        <label for="intervalInput">Frec:</label>
+        <input type="number" id="intervalInput" min="0.01" step="0.1" value="1.0">
+        <span class="unit">s</span>
+      </div>
+
+      <div class="field-group">
+        <label for="flashInput">Est:</label>
+        <input type="number" id="flashInput" min="0" step="0.1" value="0.5">
+        <span class="unit">s</span>
+      </div>
+
+      <div class="field-group">
+        <label for="durationSelect">T:</label>
+        <select id="durationSelect">
+          <option value="30">30s</option>
+          <option value="60" selected>1m</option>
+          <option value="120">2m</option>
+          <option value="180">3m</option>
+          <option value="240">4m</option>
+          <option value="300">5m</option>
+          <option value="0">Libre</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="targetSelect">Modo:</label>
+        <select id="targetSelect">
+          <option value="fondo" selected>Fondo</option>
+          <option value="palabra">Palabra</option>
+        </select>
+      </div>
+
+      <div class="btn-group">
+        <button id="btnAudio" onclick="alternarVoz()">🔊</button>
+        <button id="btnStart" class="btn-action" onclick="iniciarJuego()">GO</button>
+        <button id="btnStop" class="btn-action" onclick="detenerJuego()">STOP</button>
+      </div>
+    </div>
+
+    <div class="branding">Powered by @entulimite Lab</div>
+  </div>
+
+  <script>
+    var paletaColores = [
+      { hex: '#FF0000', nombre: 'Rojo', textoHex: '#FFFFFF' },
+      { hex: '#00FF00', nombre: 'Verde', textoHex: '#000000' },
+      { hex: '#0000FF', nombre: 'Azul', textoHex: '#FFFFFF' },
+      { hex: '#FFFF00', nombre: 'Amarillo', textoHex: '#000000' },
+      { hex: '#FF00FF', nombre: 'Rosa', textoHex: '#FFFFFF' },
+      { hex: '#00FFFF', nombre: 'Cian', textoHex: '#000000' }
+    ];
+
+    var temporizadorColor = null;
+    var temporizadorFlash = null;
+    var temporizadorCuentaRegresiva = null;
+    var tiempoRestante = 0;
+    var vozActivada = true;
+
+    var pad = document.getElementById('pad');
+    var wordDisplay = document.getElementById('wordDisplay');
+    var timerDisplay = document.getElementById('timerDisplay');
+    var btnAudio = document.getElementById('btnAudio');
+
+    function alternarVoz() {
+      vozActivada = !vozActivada;
+      if (vozActivada) {
+        btnAudio.innerHTML = '🔊';
+        btnAudio.style.backgroundColor = '#333';
+      } else {
+        btnAudio.innerHTML = '0;
+        btnAudio.style.backgroundColor = '#555';
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+      }
+    }
+
+    function decirColor(texto) {
+      if (vozActivada && ('speechSynthesis' in window)) {
+        window.speechSynthesis.cancel();
+        var mensaje = new SpeechSynthesisUtterance(texto);
+        mensaje.lang = 'es-ES';
+        mensaje.rate = 1.2;
+        window.speechSynthesis.speak(mensaje);
+      }
+    }
+
+    function formatearTiempo(segundos) {
+      var mins = Math.floor(segundos / 60);
+      var segs = segundos % 60;
+      if (mins < 10) { mins = '0' + mins; }
+      if (segs < 10) { segs = '0' + segs; }
+      return mins + ':' + segs;
+    }
+
+    function cambiarColorStroop() {
+      // 1. Color de Fondo Aleatorio
+      var idxFondo = Math.floor(Math.random() * paletaColores.length);
+      var objFondo = paletaColores[idxFondo];
+
+      // 2. Palabra Aleatoria INCONGRUENTE
+      var idxPalabra;
+      do {
+        idxPalabra = Math.floor(Math.random() * paletaColores.length);
+      } while (idxPalabra === idxFondo);
+      var objPalabra = paletaColores[idxPalabra];
+
+      // 3. Renderizar en Pantalla
+      pad.style.backgroundColor = objFondo.hex;
+      wordDisplay.innerText = objPalabra.nombre;
+      wordDisplay.style.color = objFondo.textoHex;
+      wordDisplay.style.display = 'block';
+
+      // 4. Audio según la regla de atención seleccionada
+      var modoObjetivo = document.getElementById('targetSelect').value;
+      if (modoObjetivo === 'fondo') {
+        decirColor(objFondo.nombre);
+      } else {
+        decirColor(objPalabra.nombre);
+      }
+
+      // 5. Ocultar según Tiempo de Estímulo
+      var duracionFlashSeg = parseFloat(document.getElementById('flashInput').value) || 0;
+      if (duracionFlashSeg > 0) {
+        if (temporizadorFlash !== null) { clearTimeout(temporizadorFlash); }
+        temporizadorFlash = setTimeout(function() {
+          pad.style.backgroundColor = '#222';
+          wordDisplay.style.display = 'none';
+        }, duracionFlashSeg * 1000);
+      }
+    }
+
+    function iniciarJuego() {
+      detenerJuego();
+
+      var intervaloColorMs = (parseFloat(document.getElementById('intervalInput').value) || 1.0) * 1000;
+      var duracionTotalSeg = parseInt(document.getElementById('durationSelect').value, 10);
+
+      tiempoRestante = duracionTotalSeg;
+
+      if (duracionTotalSeg > 0) {
+        timerDisplay.innerHTML = formatearTiempo(tiempoRestante);
+        temporizadorCuentaRegresiva = setInterval(function() {
+          tiempoRestante--;
+          timerDisplay.innerHTML = formatearTiempo(tiempoRestante);
+          if (tiempoRestante <= 0) {
+            detenerJuego();
+          }
+        }, 1000);
+      } else {
+        timerDisplay.innerHTML = "oo:oo";
+      }
+
+      cambiarColorStroop();
+      temporizadorColor = setInterval(function() {
+        cambiarColorStroop();
+      }, intervaloColorMs);
+    }
+
+    function detenerJuego() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (temporizadorColor !== null) { clearInterval(temporizadorColor); temporizadorColor = null; }
+      if (temporizadorFlash !== null) { clearTimeout(temporizadorFlash); temporizadorFlash = null; }
+      if (temporizadorCuentaRegresiva !== null) { clearInterval(temporizadorCuentaRegresiva); temporizadorCuentaRegresiva = null; }
+      
+      pad.style.backgroundColor = '#222';
+      wordDisplay.style.display = 'none';
+      timerDisplay.innerHTML = "00:00";
+    }
+  </script>
+</body>
+</html>
